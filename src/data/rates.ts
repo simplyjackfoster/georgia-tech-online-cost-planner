@@ -1,4 +1,12 @@
 export type ProgramKey = 'omsa' | 'omscs' | 'omscsec';
+export type TermSeason = 'Spring' | 'Summer' | 'Fall';
+
+export type StartTermOption = {
+  key: string;
+  season: TermSeason;
+  year: number;
+  label: string;
+};
 
 export const PROGRAM_LABELS: Record<ProgramKey, string> = {
   omsa: 'MS in Analytics (OMSA)',
@@ -34,3 +42,9 @@ export const PROGRAMS = Object.entries(PROGRAM_LABELS).map(([key, label]) => ({
   perCreditRate: perCreditRateByProgram[key as ProgramKey],
   degreeCredits: degreeCreditsByProgram[key as ProgramKey]
 }));
+
+export const START_TERMS: StartTermOption[] = [
+  { key: 'spring-2026', season: 'Spring', year: 2026, label: 'Spring 2026' },
+  { key: 'summer-2026', season: 'Summer', year: 2026, label: 'Summer 2026' },
+  { key: 'fall-2026', season: 'Fall', year: 2026, label: 'Fall 2026' }
+];

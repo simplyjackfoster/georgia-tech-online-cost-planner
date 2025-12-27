@@ -4,13 +4,12 @@ import { describe, expect, it } from 'vitest';
 import App from './App';
 
 describe('App', () => {
-  it('shows validation when credits are below minimum', async () => {
+  it('updates the dashboard when a pace is selected', async () => {
     render(<App />);
 
-    const creditInput = screen.getByLabelText(/credits this term/i);
-    await userEvent.clear(creditInput);
-    await userEvent.type(creditInput, '0');
+    const paceRow = screen.getByLabelText(/select 3 credits per term/i);
+    await userEvent.click(paceRow);
 
-    expect(screen.getByText(/credits must be at least 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/10 semesters/i)).toBeInTheDocument();
   });
 });
