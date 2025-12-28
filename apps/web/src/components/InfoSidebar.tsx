@@ -2,6 +2,7 @@ import React from 'react';
 import { PROGRAMS, degreeCreditsByProgram, onlineLearningFeeRule } from '../data/rates';
 import { formatCurrency } from '../lib/calc';
 import Accordion from './Accordion';
+import TrustCard from './TrustCard';
 
 const InfoSidebar: React.FC = () => {
   const officialRatesContent = (
@@ -109,6 +110,8 @@ const InfoSidebar: React.FC = () => {
           {explainMathContent}
         </Accordion>
       </section>
+
+      <TrustCard />
 
     </aside>
   );

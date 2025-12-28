@@ -12,15 +12,10 @@
 - `apps/web/src/hooks/usePlanState.ts` fires `window.umami?.track('plan_generated')` after `handleApplyDraft` updates state and the plan is deemed valid.
 
 ### Server-side Umami API usage
-- `apps/api/api/adoption.ts` fetches Umami events to count `plan_generated` and returns `{ count }`.
+- `apps/api/api/metrics/plans-generated.ts` fetches Umami events to count `plan_generated` and returns `{ count, days, updatedAt }`.
 
 ### Environment variables
-- Docs reference `UMAMI_API_KEY` for the Vercel API (`docs/README.md`).
-- No mention of `UMAMI_WEBSITE_ID` (website ID is hard-coded in the API handler).
+- Docs reference `UMAMI_API_KEY`, `UMAMI_WEBSITE_ID`, and optional `UMAMI_API_ENDPOINT` for the Vercel API (`docs/README.md`).
 
 ## Issues found
-- **Incorrect API base URL**: `apps/api/api/adoption.ts` uses `https://cloud.umami.is/api` instead of `https://api.umami.is/v1`.
-- **Incorrect auth header**: uses `Authorization: Bearer ...` instead of `x-umami-api-key`.
-- **Mixed events returned**: `/events` responses include pageviews and custom events, but no `eventType` filtering.
-- **No time window or pagination handling**: missing `startAt`, `endAt`, and pagination, which can lead to partial or inconsistent counts.
-- **Hard-coded website ID**: server-side ID is fixed in code instead of being configurable via env.
+- None. The serverless API uses `https://api.umami.is/v1`, includes the `x-umami-api-key` header, paginates, filters on `eventType === 2`, and reads website configuration from env.

@@ -3,11 +3,12 @@
 ## API basics
 - Base URL: `https://api.umami.is/v1`
 - Auth header: `x-umami-api-key: $UMAMI_API_KEY`
-- Custom events filter: `eventType === 2`
+- Custom events filter: `eventType === 2` (plus `eventName === "plan_generated"` for usage counts)
 
 ## Environment variables
 - `UMAMI_API_KEY` (server-side only; never expose to the browser)
 - `UMAMI_WEBSITE_ID` (website UUID from Umami Cloud)
+- `UMAMI_API_ENDPOINT` (optional override; defaults to `https://api.umami.is/v1`)
 
 ## Verify locally
 Run the verification script from the repo root:
@@ -17,6 +18,13 @@ UMAMI_API_KEY=... UMAMI_WEBSITE_ID=... pnpm umami:verify --event plan_generated 
 ```
 
 Output includes total events, unique sessions (deduped by `sessionId`), and the last five events with metadata.
+
+## Server-side usage metric
+- The calculator fetches `/api/metrics/plans-generated?days=30` from the serverless API.
+- The serverless handler queries Umami Cloud with `x-umami-api-key`, paginates results, and filters strictly on:
+  - `eventType === 2`
+  - `eventName === "plan_generated"`
+- The API response returns `{ count, days, updatedAt }` and is safe for the browser since the secret stays server-side.
 
 ## Common failure modes
 - **Wrong base URL**: `https://cloud.umami.is/api` will not work for Cloud API calls.
