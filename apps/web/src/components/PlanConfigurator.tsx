@@ -129,7 +129,7 @@ const PlanConfigurator: React.FC<PlanConfiguratorProps> = ({
 
   return (
     <section
-      className="flex flex-col gap-3 rounded-2xl border border-tech-gold/40 bg-white p-4 shadow-sm"
+      className="flex flex-col gap-3 rounded-2xl border border-tech-gold/40 bg-white p-3 shadow-sm sm:p-4"
       role="region"
       aria-label="Start your OMS plan"
     >
@@ -144,13 +144,13 @@ const PlanConfigurator: React.FC<PlanConfiguratorProps> = ({
               type="button"
               onClick={() => onDraftProgramChange(program.key)}
               aria-pressed={draftProgramKey === program.key}
-              className={`min-h-[44px] rounded-lg border px-3.5 py-2.5 text-left transition duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tech-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white ${
+              className={`min-h-[40px] min-w-0 rounded-lg border px-3.5 py-2 text-left transition duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-tech-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-white sm:min-h-[44px] sm:py-2.5 ${
                 draftProgramKey === program.key
                   ? 'border-tech-gold/70 bg-tech-gold/15 shadow-inner'
                   : 'border-tech-gold/30 bg-tech-white shadow-[inset_0_0_0_1px_rgba(15,23,42,0.05)] hover:border-tech-gold/60 hover:bg-tech-gold/10'
               }`}
             >
-              <p className="text-base font-semibold tracking-[0.08em] leading-tight text-tech-navy">
+              <p className="text-sm font-semibold leading-tight tracking-[0.08em] text-tech-navy sm:text-base">
                 {program.key.toUpperCase()}
               </p>
               <p className="text-[10px] leading-tight tracking-[0.06em] text-tech-navy/70">
@@ -184,7 +184,7 @@ const PlanConfigurator: React.FC<PlanConfiguratorProps> = ({
           Update My Plan
         </button>
 
-        <div className="mt-4 rounded-2xl border border-tech-gold/30 bg-tech-gold/5 p-3">
+        <div className="mt-4 rounded-2xl border border-tech-gold/30 bg-tech-gold/5 p-3 sm:p-4">
           <div className="flex flex-col gap-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
               Pacing
