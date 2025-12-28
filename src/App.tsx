@@ -8,25 +8,26 @@ import { usePlanState } from './hooks/usePlanState';
 const App: React.FC = () => {
   const {
     activePlan,
+    draftMixedPlan,
+    draftMixedRows,
+    draftPaceMode,
     draftProgramKey,
+    draftSelectedPace,
     draftStartTermKey,
+    handleApplyDraft,
     handleShare,
-    isMixedIncomplete,
+    isDraftMixedIncomplete,
     mixedPlan,
-    mixedRows,
     paceMode,
     paceRows,
     programKey,
-    selectedPace,
     selectedProgram,
     shareStatus,
+    setDraftMixedRows,
+    setDraftPaceMode,
     setDraftProgramKey,
-    setDraftStartTermKey,
-    setMixedRows,
-    setPaceMode,
-    setProgramKey,
-    setSelectedPace,
-    setStartTermKey
+    setDraftSelectedPace,
+    setDraftStartTermKey
   } = usePlanState();
 
   return (
@@ -40,20 +41,17 @@ const App: React.FC = () => {
             draftStartTermKey={draftStartTermKey}
             onDraftProgramChange={setDraftProgramKey}
             onDraftStartTermChange={setDraftStartTermKey}
-            onApplyDraft={() => {
-              setProgramKey(draftProgramKey);
-              setStartTermKey(draftStartTermKey);
-            }}
-            paceMode={paceMode}
-            onPaceModeChange={setPaceMode}
+            onApplyDraft={handleApplyDraft}
+            paceMode={draftPaceMode}
+            onPaceModeChange={setDraftPaceMode}
             paceRows={paceRows}
-            selectedPace={selectedPace}
-            onSelectPace={setSelectedPace}
-            mixedRows={mixedRows}
-            onMixedRowsChange={setMixedRows}
-            mixedPlan={mixedPlan}
-            programKey={programKey}
-            isMixedIncomplete={isMixedIncomplete}
+            selectedPace={draftSelectedPace}
+            onSelectPace={setDraftSelectedPace}
+            mixedRows={draftMixedRows}
+            onMixedRowsChange={setDraftMixedRows}
+            mixedPlan={draftMixedPlan}
+            programKey={draftProgramKey}
+            isMixedIncomplete={isDraftMixedIncomplete}
           />
 
           <PlanSummary

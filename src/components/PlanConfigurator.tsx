@@ -1,7 +1,11 @@
 import React from 'react';
 import { PROGRAMS, START_TERMS, degreeCreditsByProgram, type ProgramKey } from '../data/rates';
-import { formatCurrency } from '../lib/calc';
-import { type MixedLoadRow, type MixedPlanResult } from '../lib/plan';
+import {
+  buildTermLabel,
+  resolveStartTerm,
+  type MixedLoadRow,
+  type MixedPlanResult
+} from '../lib/plan';
 
 type PaceRow = {
   creditsPerTerm: number;
@@ -31,6 +35,49 @@ type PlanConfiguratorProps = {
   isMixedIncomplete: boolean;
 };
 
+const expandMixedRows = (rows: MixedLoadRow[]): number[] =>
+  rows.flatMap((row) => Array.from({ length: row.terms }, () => row.creditsPerTerm));
+
+const clampCredits = (value: number): number => {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(9, Math.round(value)));
+};
+
+const compressTermCredits = (credits: number[]): MixedLoadRow[] => {
+  if (credits.length === 0) {
+    return [];
+  }
+  const normalized = credits.map(clampCredits);
+  const rows: MixedLoadRow[] = [];
+  let currentCredits = normalized[0];
+  let terms = 1;
+
+  for (let index = 1; index < normalized.length; index += 1) {
+    const nextCredits = normalized[index];
+    if (nextCredits === currentCredits) {
+      terms += 1;
+    } else {
+      rows.push({
+        id: `row-${rows.length + 1}`,
+        terms,
+        creditsPerTerm: currentCredits
+      });
+      currentCredits = nextCredits;
+      terms = 1;
+    }
+  }
+
+  rows.push({
+    id: `row-${rows.length + 1}`,
+    terms,
+    creditsPerTerm: currentCredits
+  });
+
+  return rows;
+};
+
 const PlanConfigurator: React.FC<PlanConfiguratorProps> = ({
   draftProgramKey,
   draftStartTermKey,
@@ -48,8 +95,47 @@ const PlanConfigurator: React.FC<PlanConfiguratorProps> = ({
   programKey,
   isMixedIncomplete
 }) => {
+  const selectedRow = paceRows.find((row) => row.creditsPerTerm === selectedPace) ?? paceRows[0];
+  const termCredits = expandMixedRows(mixedRows);
+  const requiredCredits = degreeCreditsByProgram[programKey];
+  const plannedCredits = termCredits.reduce((sum, credits) => sum + credits, 0);
+  const remainingCredits = Math.max(requiredCredits - plannedCredits, 0);
+  const startTerm = resolveStartTerm(draftStartTermKey);
+
+  const updateTermCredits = (updater: (credits: number[]) => number[]) => {
+    onMixedRowsChange((rows) => {
+      const credits = expandMixedRows(rows);
+      const nextCredits = updater(credits);
+      return compressTermCredits(nextCredits);
+    });
+  };
+
+  const handleCreditChange = (index: number, value: number) => {
+    updateTermCredits((credits) => {
+      const next = [...credits];
+      next[index] = clampCredits(value);
+      return next;
+    });
+  };
+
+  const handleAddTerm = () => {
+    updateTermCredits((credits) => {
+      const lastCredits = credits[credits.length - 1];
+      const nextCredits = clampCredits(Number.isFinite(lastCredits) ? lastCredits : 3);
+      return [...credits, nextCredits || 3];
+    });
+  };
+
+  const handleRemoveLastTerm = () => {
+    updateTermCredits((credits) => credits.slice(0, -1));
+  };
+
   return (
-    <section className="flex flex-col gap-3 rounded-2xl border border-tech-gold/40 bg-white p-4 shadow-sm">
+    <section
+      className="flex flex-col gap-3 rounded-2xl border border-tech-gold/40 bg-white p-4 shadow-sm"
+      role="region"
+      aria-label="Start your OMS plan"
+    >
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
           Start your OMS plan: program + start semester
@@ -97,171 +183,182 @@ const PlanConfigurator: React.FC<PlanConfiguratorProps> = ({
         </button>
 
         <div className="mt-4 rounded-2xl border border-tech-gold/30 bg-tech-white p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-col gap-1">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
-              Compare paces
+              Pacing
             </p>
-            <div className="inline-flex rounded-lg border border-tech-gold/40 bg-tech-gold/10 p-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
-              <button
-                type="button"
-                onClick={() => onPaceModeChange('constant')}
-                aria-pressed={paceMode === 'constant'}
-                className={`rounded-md px-3 py-1.5 transition ${
-                  paceMode === 'constant'
-                    ? 'bg-tech-navy text-tech-white shadow-sm'
-                    : 'text-tech-goldDark hover:bg-tech-gold/20'
-                }`}
-              >
-                Constant Pace
-              </button>
-              <button
-                type="button"
-                onClick={() => onPaceModeChange('mixed')}
-                aria-pressed={paceMode === 'mixed'}
-                className={`rounded-md px-3 py-1.5 transition ${
-                  paceMode === 'mixed'
-                    ? 'bg-tech-navy text-tech-white shadow-sm'
-                    : 'text-tech-goldDark hover:bg-tech-gold/20'
-                }`}
-              >
-                Mixed Load
-              </button>
-            </div>
+            <p className="text-xs text-tech-navy/60">
+              Choose how many credits you&apos;ll take each term.
+            </p>
           </div>
 
-          {paceMode === 'constant' ? (
-            <div className="mt-3 overflow-hidden rounded-xl border border-tech-gold/30">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-tech-gold/10 text-[11px] uppercase tracking-[0.2em] text-tech-goldDark">
-                  <tr>
-                    <th className="px-3 py-2">Credits / Term</th>
-                    <th className="px-3 py-2">Finish Semester</th>
-                    <th className="px-3 py-2">Total Cost</th>
-                    <th className="px-3 py-2">Avg / Term</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paceRows.map((row) => (
-                    <tr
-                      key={row.creditsPerTerm}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => onSelectPace(row.creditsPerTerm)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') {
-                          event.preventDefault();
-                          onSelectPace(row.creditsPerTerm);
-                        }
-                      }}
-                      className={`cursor-pointer border-t border-tech-gold/20 transition ${
-                        selectedPace === row.creditsPerTerm
-                          ? 'bg-tech-navy text-tech-white'
-                          : 'hover:bg-tech-gold/10'
-                      }`}
-                      aria-pressed={selectedPace === row.creditsPerTerm}
-                      aria-label={`Select ${row.creditsPerTerm} credits per term`}
-                    >
-                      <td className="px-3 py-2 font-semibold">{row.creditsPerTerm}</td>
-                      <td className="px-3 py-2">{row.finishTerm.label}</td>
-                      <td className="px-3 py-2">{formatCurrency(row.fullDegree.totalCost)}</td>
-                      <td className="px-3 py-2">{formatCurrency(row.fullDegree.averagePerTerm)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="mt-3 rounded-xl border border-tech-gold/30 bg-tech-white p-3 text-xs">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
-                  Mixed Load Planner
-                </p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onMixedRowsChange((rows) => [
-                      ...rows,
-                      {
-                        id: `row-${rows.length + 1}`,
-                        terms: 1,
-                        creditsPerTerm: 3
-                      }
-                    ])
-                  }
-                  className="rounded-full border border-tech-gold/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark transition hover:bg-tech-gold/10"
+          <div className="mt-3 space-y-3" role="radiogroup" aria-label="Pacing options">
+            <div
+              className={`rounded-xl border transition ${
+                paceMode === 'constant'
+                  ? 'border-tech-gold/60 bg-tech-gold/15 shadow-sm'
+                  : 'border-tech-gold/20 bg-tech-white/70'
+              }`}
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={paceMode === 'constant'}
+                onClick={() => onPaceModeChange('constant')}
+                className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-tech-navy">Same every term (Constant)</p>
+                  <p className="mt-1 text-xs text-tech-navy/60">
+                    Pick a steady credits-per-term pace.
+                  </p>
+                </div>
+                <span
+                  className={`mt-1 inline-flex h-4 w-4 items-center justify-center rounded-full border ${
+                    paceMode === 'constant'
+                      ? 'border-tech-navy bg-tech-navy text-tech-white'
+                      : 'border-tech-gold/40 bg-white'
+                  }`}
+                  aria-hidden="true"
                 >
-                  Add block
-                </button>
-              </div>
-              <div className="mt-3 space-y-2">
-                {mixedRows.map((row, index) => (
-                  <div key={row.id} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
-                    <label className="text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
-                      Terms
-                      <input
-                        type="number"
-                        min={0}
-                        className="mt-1 w-full rounded-lg border border-tech-gold/30 px-2 py-1 text-sm"
-                        value={row.terms}
-                        onChange={(event) => {
-                          const value = Number(event.target.value);
-                          onMixedRowsChange((rows) =>
-                            rows.map((item) =>
-                              item.id === row.id
-                                ? { ...item, terms: Number.isFinite(value) ? value : 0 }
-                                : item
-                            )
-                          );
-                        }}
-                      />
-                    </label>
-                    <label className="text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
-                      Credits each
-                      <input
-                        type="number"
-                        min={0}
-                        className="mt-1 w-full rounded-lg border border-tech-gold/30 px-2 py-1 text-sm"
-                        value={row.creditsPerTerm}
-                        onChange={(event) => {
-                          const value = Number(event.target.value);
-                          onMixedRowsChange((rows) =>
-                            rows.map((item) =>
-                              item.id === row.id
-                                ? {
-                                    ...item,
-                                    creditsPerTerm: Number.isFinite(value) ? value : 0
-                                  }
-                                : item
-                            )
-                          );
-                        }}
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onMixedRowsChange((rows) => rows.filter((item) => item.id !== row.id))
-                      }
-                      disabled={mixedRows.length === 1}
-                      className="mt-4 rounded-full border border-tech-gold/40 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark transition hover:bg-tech-gold/10 disabled:cursor-not-allowed disabled:opacity-50"
-                      aria-label={`Remove block ${index + 1}`}
-                    >
-                      Remove
-                    </button>
+                  {paceMode === 'constant' ? <span className="h-2 w-2 rounded-full bg-white" /> : null}
+                </span>
+              </button>
+              {paceMode === 'constant' ? (
+                <div className="border-t border-tech-gold/20 px-4 py-4 text-xs">
+                  <label className="text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
+                    Credits per term
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {paceRows.map((row) => (
+                        <button
+                          key={row.creditsPerTerm}
+                          type="button"
+                          onClick={() => onSelectPace(row.creditsPerTerm)}
+                          aria-pressed={selectedPace === row.creditsPerTerm}
+                          aria-label={`Select ${row.creditsPerTerm} credits per term`}
+                          className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] transition ${
+                            selectedPace === row.creditsPerTerm
+                              ? 'border-tech-navy bg-tech-navy text-tech-white'
+                              : 'border-tech-gold/40 bg-white text-tech-goldDark hover:bg-tech-gold/10'
+                          }`}
+                        >
+                          {row.creditsPerTerm} credits
+                        </button>
+                      ))}
+                    </div>
+                  </label>
+                  <div className="mt-3 grid gap-2 rounded-lg border border-tech-gold/20 bg-white px-3 py-2 text-[11px] text-tech-navy/70 sm:grid-cols-2">
+                    <div>
+                      <span className="font-semibold text-tech-navy">Estimated terms:</span>{' '}
+                      {selectedRow.fullDegree.numberOfTerms}
+                    </div>
+                    <div>
+                      <span className="font-semibold text-tech-navy">Estimated finish:</span>{' '}
+                      {selectedRow.finishTerm.label}
+                    </div>
                   </div>
-                ))}
-              </div>
-              <div className="mt-3 rounded-lg border border-tech-gold/30 bg-tech-gold/10 px-3 py-2 text-[11px] text-tech-navy/70">
-                Planned credits: {mixedPlan.plannedCredits} · Required:{' '}
-                {degreeCreditsByProgram[programKey]} · Covered: {mixedPlan.creditsCovered}
-              </div>
-              {isMixedIncomplete ? (
-                <p className="mt-2 text-[11px] text-tech-goldDark">
-                  Add more terms to cover the remaining credits.
-                </p>
+                </div>
               ) : null}
             </div>
-          )}
+
+            <div
+              className={`rounded-xl border transition ${
+                paceMode === 'mixed'
+                  ? 'border-tech-gold/60 bg-tech-gold/15 shadow-sm'
+                  : 'border-tech-gold/20 bg-tech-white/70'
+              }`}
+            >
+              <button
+                type="button"
+                role="radio"
+                aria-checked={paceMode === 'mixed'}
+                onClick={() => onPaceModeChange('mixed')}
+                className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-tech-navy">Custom schedule (Mixed)</p>
+                  <p className="mt-1 text-xs text-tech-navy/60">Some terms different than others.</p>
+                </div>
+                <span
+                  className={`mt-1 inline-flex h-4 w-4 items-center justify-center rounded-full border ${
+                    paceMode === 'mixed'
+                      ? 'border-tech-navy bg-tech-navy text-tech-white'
+                      : 'border-tech-gold/40 bg-white'
+                  }`}
+                  aria-hidden="true"
+                >
+                  {paceMode === 'mixed' ? <span className="h-2 w-2 rounded-full bg-white" /> : null}
+                </span>
+              </button>
+              {paceMode === 'mixed' ? (
+                <div className="border-t border-tech-gold/20 px-4 py-4 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
+                      Plan by term
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleAddTerm}
+                      className="rounded-full border border-tech-gold/40 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark transition hover:bg-tech-gold/10"
+                    >
+                      Add term
+                    </button>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {termCredits.map((credits, index) => {
+                      const termLabel = buildTermLabel(startTerm, index);
+                      const isLast = index === termCredits.length - 1;
+                      return (
+                        <div
+                          key={`${termLabel}-${index}`}
+                          className="grid gap-2 rounded-lg border border-tech-gold/20 bg-white px-3 py-2 sm:grid-cols-[1fr_auto] sm:items-center"
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-tech-navy">{termLabel}</p>
+                            <p className="text-[11px] text-tech-navy/60">Set credits for this term.</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
+                              Credits
+                              <input
+                                type="number"
+                                min={0}
+                                max={9}
+                                className="mt-1 w-20 rounded-lg border border-tech-gold/30 px-2 py-1 text-sm"
+                                value={credits}
+                                onChange={(event) =>
+                                  handleCreditChange(index, Number(event.target.value))
+                                }
+                                aria-label={`Credits for ${termLabel}`}
+                              />
+                            </label>
+                            {isLast && termCredits.length > 1 ? (
+                              <button
+                                type="button"
+                                onClick={handleRemoveLastTerm}
+                                className="mt-5 rounded-full border border-tech-gold/40 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark transition hover:bg-tech-gold/10"
+                              >
+                                Remove
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3 rounded-lg border border-tech-gold/30 bg-tech-gold/10 px-3 py-2 text-[11px] text-tech-navy/70">
+                    Planned credits: {plannedCredits} • Required: {requiredCredits} • Remaining:{' '}
+                    {remainingCredits}
+                  </div>
+                  {remainingCredits > 0 || isMixedIncomplete ? (
+                    <p className="mt-2 text-[11px] text-tech-goldDark">
+                      Add more terms to cover remaining credits.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
     </section>
