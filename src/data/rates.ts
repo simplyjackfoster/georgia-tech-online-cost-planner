@@ -36,11 +36,11 @@ export const MAX_CREDITS_PER_TERM = 21;
 export const MAX_TERMS = 30;
 export const TERMS_PER_YEAR_OPTIONS = [2, 3] as const;
 
-export const PROGRAMS = Object.entries(PROGRAM_LABELS).map(([key, label]) => ({
-  key: key as ProgramKey,
-  label,
-  perCreditRate: perCreditRateByProgram[key as ProgramKey],
-  degreeCredits: degreeCreditsByProgram[key as ProgramKey]
+export const PROGRAMS = (['omscs', 'omsa', 'omscsec'] as ProgramKey[]).map((key) => ({
+  key,
+  label: PROGRAM_LABELS[key],
+  perCreditRate: perCreditRateByProgram[key],
+  degreeCredits: degreeCreditsByProgram[key]
 }));
 
 export const START_TERMS: StartTermOption[] = [
