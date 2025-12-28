@@ -13,6 +13,7 @@ import { calculateFullDegree, formatCurrency, getOnlineLearningFee } from './lib
 
 const PACE_OPTIONS = [3, 6, 9];
 const TERM_SEQUENCE: TermSeason[] = ['Spring', 'Summer', 'Fall'];
+const DEFAULT_START_TERM_KEY = 'spring-2026';
 
 const getFinishTerm = (startTerm: StartTermOption, numberOfTerms: number): StartTermOption => {
   if (numberOfTerms <= 1) {
@@ -157,7 +158,9 @@ const calculateMixedPlan = (
 
 const App: React.FC = () => {
   const [programKey, setProgramKey] = useState<ProgramKey>('omscs');
-  const [startTermKey, setStartTermKey] = useState<string>(START_TERMS[0]?.key ?? 'spring-2026');
+  const [startTermKey, setStartTermKey] = useState<string>(DEFAULT_START_TERM_KEY);
+  const [draftProgramKey, setDraftProgramKey] = useState<ProgramKey>('omscs');
+  const [draftStartTermKey, setDraftStartTermKey] = useState<string>(DEFAULT_START_TERM_KEY);
   const [selectedPace, setSelectedPace] = useState<number>(6);
   const [paceMode, setPaceMode] = useState<'constant' | 'mixed'>('constant');
   const [mixedRows, setMixedRows] = useState<MixedLoadRow[]>([
@@ -175,12 +178,19 @@ const App: React.FC = () => {
     const modeParam = params.get('mode');
     const mixedParam = params.get('mixed');
 
-    if (programParam && programParam in perCreditRateByProgram) {
-      setProgramKey(programParam as ProgramKey);
-    }
-    if (startParam && START_TERMS.some((term) => term.key === startParam)) {
-      setStartTermKey(startParam);
-    }
+    const resolvedProgramKey =
+      programParam && programParam in perCreditRateByProgram
+        ? (programParam as ProgramKey)
+        : 'omscs';
+    const resolvedStartTermKey =
+      startParam && START_TERMS.some((term) => term.key === startParam)
+        ? startParam
+        : DEFAULT_START_TERM_KEY;
+
+    setProgramKey(resolvedProgramKey);
+    setStartTermKey(resolvedStartTermKey);
+    setDraftProgramKey(resolvedProgramKey);
+    setDraftStartTermKey(resolvedStartTermKey);
     if (PACE_OPTIONS.includes(paceParam)) {
       setSelectedPace(paceParam);
     }
@@ -210,8 +220,17 @@ const App: React.FC = () => {
     }
   }, []);
 
+  useEffect(() => {
+    setDraftProgramKey(programKey);
+    setDraftStartTermKey(startTermKey);
+  }, [programKey, startTermKey]);
+
   const startTerm = useMemo(() => {
-    return START_TERMS.find((term) => term.key === startTermKey) ?? START_TERMS[0];
+    return (
+      START_TERMS.find((term) => term.key === startTermKey) ??
+      START_TERMS.find((term) => term.key === DEFAULT_START_TERM_KEY) ??
+      START_TERMS[0]
+    );
   }, [startTermKey]);
 
   const paceRows = useMemo(() => {
@@ -281,7 +300,8 @@ const App: React.FC = () => {
               OMS Degree Planning Calculator
             </h1>
             <p className="text-xs text-tech-navy/70">
-              Compare pacing options and map the fastest, most cost-efficient OMS degree plan.
+              Compare pacing options and map your OMS degree plan with the fastest, most
+              cost-efficient path.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
@@ -301,16 +321,16 @@ const App: React.FC = () => {
           <section className="flex flex-col gap-3 rounded-2xl border border-tech-gold/40 bg-white p-4 shadow-sm">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
-                Step 1 — Choose Program
+                Start your OMS plan: program + start semester
               </p>
               <div className="mt-3 grid gap-2">
                 {PROGRAMS.map((program) => (
                   <button
                     key={program.key}
                     type="button"
-                    onClick={() => setProgramKey(program.key)}
+                    onClick={() => setDraftProgramKey(program.key)}
                     className={`rounded-xl border px-4 py-4 text-left transition ${
-                      programKey === program.key
+                      draftProgramKey === program.key
                         ? 'border-tech-gold bg-tech-gold/20'
                         : 'border-tech-gold/30 bg-tech-white hover:border-tech-gold/60'
                     }`}
@@ -329,8 +349,8 @@ const App: React.FC = () => {
                 Start semester
                 <select
                   className="mt-2 w-full rounded-lg border border-tech-gold/40 bg-white px-3 py-2 text-sm focus:border-tech-gold focus:outline-none focus:ring-2 focus:ring-tech-gold/30"
-                  value={startTermKey}
-                  onChange={(event) => setStartTermKey(event.target.value)}
+                  value={draftStartTermKey}
+                  onChange={(event) => setDraftStartTermKey(event.target.value)}
                 >
                   {START_TERMS.map((term) => (
                     <option key={term.key} value={term.key}>
@@ -339,6 +359,16 @@ const App: React.FC = () => {
                   ))}
                 </select>
               </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setProgramKey(draftProgramKey);
+                  setStartTermKey(draftStartTermKey);
+                }}
+                className="mt-3 w-full rounded-lg bg-tech-navy px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-tech-white transition hover:opacity-90"
+              >
+                Update My Plan
+              </button>
 
               <div className="mt-4 rounded-2xl border border-tech-gold/30 bg-tech-white p-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
@@ -635,7 +665,9 @@ const App: React.FC = () => {
           <aside className="flex flex-col gap-3">
             <section className="rounded-2xl border border-tech-gold/40 bg-white p-4 text-xs text-tech-navy/80 shadow-sm">
               <h2 className="text-sm font-semibold text-tech-goldMedium">Official rates</h2>
-              <p className="mt-2 text-[11px] text-tech-navy/60">Official Spring 2026 rates.</p>
+              <p className="mt-2 text-[11px] text-tech-navy/60">
+                Office of the Bursar Spring 2026 tuition totals.
+              </p>
               <div className="mt-3 space-y-2">
                 {PROGRAMS.map((program) => (
                   <div key={program.key} className="flex items-center justify-between">
@@ -662,8 +694,17 @@ const App: React.FC = () => {
                   ))}
                 </div>
                 <div className="rounded-lg border border-tech-gold/30 bg-tech-gold/10 px-3 py-2 text-[11px] text-tech-navy/70">
-                  Data transparency: Tuition and fee math comes directly from the Spring 2026
-                  configuration in this dashboard. No external links or hidden markups.
+                  Data transparency:{' '}
+                  <a
+                    href="https://bursar.gatech.edu/student/tuition/sp26/sp26_totalsA.pdf"
+                    className="text-tech-navy underline"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Office of the Bursar Spring 2026 tuition totals
+                  </a>
+                  . Tuition and fee math aligns with the Online MS program totals. No hidden
+                  markups.
                 </div>
               </div>
             </section>
@@ -678,13 +719,13 @@ const App: React.FC = () => {
                   per-credit rate.
                 </li>
                 <li>
-                  <strong className="text-tech-goldDark">Terms needed:</strong> ceil(required credits
-                  ÷ credits per term).
+                  <strong className="text-tech-goldDark">Terms needed:</strong> divide required
+                  credits by credits per term and round up to the next whole term.
                 </li>
                 <li>
-                  <strong className="text-tech-goldDark">Fee per term:</strong> credits per term &lt;{' '}
-                  {onlineLearningFeeRule.thresholdCredits}
-                  ? {formatCurrency(onlineLearningFeeRule.belowThresholdFee)} :{' '}
+                  <strong className="text-tech-goldDark">Fee per term:</strong> if credits per term
+                  are below {onlineLearningFeeRule.thresholdCredits}, the fee is{' '}
+                  {formatCurrency(onlineLearningFeeRule.belowThresholdFee)}; otherwise it is{' '}
                   {formatCurrency(onlineLearningFeeRule.atOrAboveThresholdFee)}.
                 </li>
                 <li>
