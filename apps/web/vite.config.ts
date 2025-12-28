@@ -4,13 +4,11 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
-  const isGithubPages = env.GITHUB_PAGES === 'true';
-  const isVercel = env.VERCEL === '1';
   const fallbackBase = '/';
   const base =
     env.VITE_BASE ||
     env.PUBLIC_URL ||
-    env.GITHUB_PAGES_BASE ||
+    (env.VITE_GITHUB_PAGES === 'true' ? env.VITE_GITHUB_PAGES_BASE : '') ||
     fallbackBase;
 
   return {

@@ -11,8 +11,8 @@
    ```
 3. Configure GitHub Pages to deploy the `apps/web/dist` folder (typically via a GitHub Actions workflow).
 4. Set the following build-time environment variables for the GitHub Pages build:
-   - `GITHUB_PAGES=true`
-   - `GITHUB_PAGES_BASE=/georgia-tech-online-cost-estimator/` (adjust if the repo name changes)
+   - `VITE_GITHUB_PAGES=true`
+   - `VITE_GITHUB_PAGES_BASE=/georgia-tech-online-cost-estimator/` (adjust if the repo name changes)
    - `VITE_API_BASE_URL=https://<your-vercel-project>.vercel.app` (points the web app at the API)
    - `VITE_SOURCE_URL=https://github.com/<owner>/<repo>` (optional, for the trust card CTA)
 
