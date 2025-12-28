@@ -50,7 +50,9 @@ type MixedPlanResult = {
   schedule: Array<{
     termLabel: string;
     credits: number;
+    tuition: number;
     fee: number;
+    total: number;
   }>;
 };
 
@@ -96,13 +98,13 @@ const calculateMixedPlan = (
     terms: Number.isFinite(row.terms) ? Math.max(0, row.terms) : 0,
     creditsPerTerm: Number.isFinite(row.creditsPerTerm) ? Math.max(0, row.creditsPerTerm) : 0
   }));
-  const totalTuition = Math.round(perCreditRateByProgram[programKey] * totalCredits * 100) / 100;
   const plannedCredits = sanitizedRows.reduce(
     (sum, row) => sum + row.terms * row.creditsPerTerm,
     0
   );
   let creditsRemaining = totalCredits;
   let totalFees = 0;
+  let totalTuition = 0;
   let numberOfTerms = 0;
   const schedule: MixedPlanResult['schedule'] = [];
 
@@ -114,11 +116,17 @@ const calculateMixedPlan = (
       numberOfTerms += 1;
       const creditsThisTerm = Math.min(row.creditsPerTerm, creditsRemaining);
       const fee = getOnlineLearningFee(creditsThisTerm);
+      const tuition =
+        Math.round(perCreditRateByProgram[programKey] * creditsThisTerm * 100) / 100;
+      const total = Math.round((tuition + fee) * 100) / 100;
+      totalTuition = Math.round((totalTuition + tuition) * 100) / 100;
       totalFees = Math.round((totalFees + fee) * 100) / 100;
       schedule.push({
         termLabel: buildTermLabel(startTerm, numberOfTerms - 1),
         credits: creditsThisTerm,
-        fee
+        tuition,
+        fee,
+        total
       });
       creditsRemaining -= creditsThisTerm;
     }
@@ -317,9 +325,6 @@ const App: React.FC = () => {
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
-                Step 2 — Compare Paces
-              </p>
               <label className="mt-2 block text-xs font-semibold text-tech-navy">
                 Start semester
                 <select
@@ -335,34 +340,41 @@ const App: React.FC = () => {
                 </select>
               </label>
 
-              <div className="mt-3 grid gap-2">
-                <div className="inline-flex rounded-full border border-tech-gold/30 bg-tech-white p-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
-                  <button
-                    type="button"
-                    onClick={() => setPaceMode('constant')}
-                    className={`rounded-full px-3 py-2 transition ${
-                      paceMode === 'constant'
-                        ? 'bg-tech-navy text-tech-white'
-                        : 'text-tech-goldDark hover:bg-tech-gold/10'
-                    }`}
-                  >
-                    Constant Pace
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaceMode('mixed')}
-                    className={`rounded-full px-3 py-2 transition ${
-                      paceMode === 'mixed'
-                        ? 'bg-tech-navy text-tech-white'
-                        : 'text-tech-goldDark hover:bg-tech-gold/10'
-                    }`}
-                  >
-                    Mixed Load
-                  </button>
+              <div className="mt-4 rounded-2xl border border-tech-gold/30 bg-tech-white p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
+                    Compare paces
+                  </p>
+                  <div className="inline-flex rounded-lg border border-tech-gold/40 bg-tech-gold/10 p-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
+                    <button
+                      type="button"
+                      onClick={() => setPaceMode('constant')}
+                      aria-pressed={paceMode === 'constant'}
+                      className={`rounded-md px-3 py-1.5 transition ${
+                        paceMode === 'constant'
+                          ? 'bg-tech-navy text-tech-white shadow-sm'
+                          : 'text-tech-goldDark hover:bg-tech-gold/20'
+                      }`}
+                    >
+                      Constant Pace
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaceMode('mixed')}
+                      aria-pressed={paceMode === 'mixed'}
+                      className={`rounded-md px-3 py-1.5 transition ${
+                        paceMode === 'mixed'
+                          ? 'bg-tech-navy text-tech-white shadow-sm'
+                          : 'text-tech-goldDark hover:bg-tech-gold/20'
+                      }`}
+                    >
+                      Mixed Load
+                    </button>
+                  </div>
                 </div>
 
                 {paceMode === 'constant' ? (
-                  <div className="overflow-hidden rounded-xl border border-tech-gold/30">
+                  <div className="mt-3 overflow-hidden rounded-xl border border-tech-gold/30">
                     <table className="w-full text-left text-xs">
                       <thead className="bg-tech-gold/10 text-[11px] uppercase tracking-[0.2em] text-tech-goldDark">
                         <tr>
@@ -405,7 +417,7 @@ const App: React.FC = () => {
                     </table>
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-tech-gold/30 bg-tech-white p-3 text-xs">
+                  <div className="mt-3 rounded-xl border border-tech-gold/30 bg-tech-white p-3 text-xs">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-tech-goldDark">
                         Mixed Load Planner
@@ -507,7 +519,7 @@ const App: React.FC = () => {
           <section className="flex flex-col gap-3 rounded-2xl border border-tech-gold/40 bg-white p-4 shadow-sm">
             <div className="rounded-2xl bg-tech-navy px-4 py-4 text-tech-white">
               <p className="text-[11px] uppercase tracking-[0.2em] text-tech-gold">
-                Step 3 — Your Degree Plan Dashboard
+                Your degree plan
               </p>
               <h2 className="mt-2 text-xl font-semibold">
                 Your {selectedProgram?.key.toUpperCase()} Plan
@@ -601,11 +613,17 @@ const App: React.FC = () => {
                     <p className="text-tech-navy/60">Add terms to see a timeline.</p>
                   ) : (
                     mixedPlan.schedule.map((term) => (
-                      <div key={term.termLabel} className="flex items-center justify-between">
-                        <span>{term.termLabel}</span>
-                        <span className="font-semibold">
-                          {term.credits} credits · {formatCurrency(term.fee)} fee
-                        </span>
+                      <div key={term.termLabel} className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-tech-navy">{term.termLabel}</p>
+                          <p className="text-[11px] text-tech-navy/60">
+                            {term.credits} credits · {formatCurrency(term.tuition)} tuition +{' '}
+                            {formatCurrency(term.fee)} fees
+                          </p>
+                        </div>
+                        <p className="text-right text-sm font-semibold text-tech-navy">
+                          {formatCurrency(term.total)} total
+                        </p>
                       </div>
                     ))
                   )}
@@ -616,9 +634,7 @@ const App: React.FC = () => {
 
           <aside className="flex flex-col gap-3">
             <section className="rounded-2xl border border-tech-gold/40 bg-white p-4 text-xs text-tech-navy/80 shadow-sm">
-              <h2 className="text-sm font-semibold text-tech-goldMedium">
-                Step 4 — Official Rates Panel
-              </h2>
+              <h2 className="text-sm font-semibold text-tech-goldMedium">Official rates</h2>
               <p className="mt-2 text-[11px] text-tech-navy/60">Official Spring 2026 rates.</p>
               <div className="mt-3 space-y-2">
                 {PROGRAMS.map((program) => (
