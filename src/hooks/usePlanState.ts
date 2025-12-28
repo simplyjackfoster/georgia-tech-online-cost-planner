@@ -18,9 +18,11 @@ import {
 } from '../lib/plan';
 
 const DEFAULT_MIXED_ROWS = [
-  { id: 'row-1', terms: 4, creditsPerTerm: 3 },
-  { id: 'row-2', terms: 4, creditsPerTerm: 6 },
-  { id: 'row-3', terms: 2, creditsPerTerm: 3 }
+  { id: 'row-1', terms: 2, creditsPerTerm: 3 },
+  { id: 'row-2', terms: 2, creditsPerTerm: 6 },
+  { id: 'row-3', terms: 1, creditsPerTerm: 3 },
+  { id: 'row-4', terms: 2, creditsPerTerm: 6 },
+  { id: 'row-5', terms: 1, creditsPerTerm: 3 }
 ];
 
 export const usePlanState = () => {
