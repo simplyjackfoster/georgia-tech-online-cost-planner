@@ -44,6 +44,12 @@ export const PROGRAMS = (['omscs', 'omsa', 'omscsec'] as ProgramKey[]).map((key)
 }));
 
 export const START_TERMS: StartTermOption[] = [
+  { key: 'spring-2024', season: 'Spring', year: 2024, label: 'Spring 2024' },
+  { key: 'summer-2024', season: 'Summer', year: 2024, label: 'Summer 2024' },
+  { key: 'fall-2024', season: 'Fall', year: 2024, label: 'Fall 2024' },
+  { key: 'spring-2025', season: 'Spring', year: 2025, label: 'Spring 2025' },
+  { key: 'summer-2025', season: 'Summer', year: 2025, label: 'Summer 2025' },
+  { key: 'fall-2025', season: 'Fall', year: 2025, label: 'Fall 2025' },
   { key: 'spring-2026', season: 'Spring', year: 2026, label: 'Spring 2026' },
   { key: 'summer-2026', season: 'Summer', year: 2026, label: 'Summer 2026' },
   { key: 'fall-2026', season: 'Fall', year: 2026, label: 'Fall 2026' }
