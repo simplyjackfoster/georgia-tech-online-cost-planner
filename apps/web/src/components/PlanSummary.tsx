@@ -2,7 +2,6 @@ import React from 'react';
 import { formatCurrency } from '../lib/calc';
 import { type MixedPlanResult } from '../lib/plan';
 import { type ProgramKey } from '../data/rates';
-import TrustCard from './TrustCard';
 
 type ActivePlan = MixedPlanResult & {
   finishTerm: { label: string };
@@ -140,10 +139,6 @@ const PlanSummary: React.FC<PlanSummaryProps> = ({
           </div>
         </details>
       </div>
-
-      <TrustCard className="sm:hidden" />
-
-      <TrustCard className="hidden sm:block" />
 
       <div className="hidden grid gap-3 md:grid-cols-2 sm:grid">
         <div className="rounded-xl border border-tech-gold/30 bg-tech-white px-4 py-3">
