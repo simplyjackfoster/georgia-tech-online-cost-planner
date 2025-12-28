@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   PROGRAMS,
   START_TERMS,
@@ -36,7 +36,8 @@ export const usePlanState = () => {
   const [draftPaceMode, setDraftPaceMode] = useState<'constant' | 'mixed'>('constant');
   const [mixedRows, setMixedRows] = useState(DEFAULT_MIXED_ROWS);
   const [draftMixedRows, setDraftMixedRows] = useState(DEFAULT_MIXED_ROWS);
-  const [shareStatus, setShareStatus] = useState<string>('');
+  const [shareStatus, setShareStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const shareResetTimer = useRef<number | null>(null);
   const isPaceOption = (value: number): value is (typeof PACE_OPTIONS)[number] =>
     PACE_OPTIONS.includes(value as (typeof PACE_OPTIONS)[number]);
 
@@ -180,17 +181,43 @@ export const usePlanState = () => {
     draftStartTermKey
   ]);
 
+  const scheduleShareReset = useCallback(() => {
+    if (shareResetTimer.current) {
+      window.clearTimeout(shareResetTimer.current);
+    }
+    shareResetTimer.current = window.setTimeout(() => {
+      setShareStatus('idle');
+    }, 2000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (shareResetTimer.current) {
+        window.clearTimeout(shareResetTimer.current);
+      }
+    };
+  }, []);
+
   const handleShare = useCallback(async () => {
     const url = buildShareUrl(programKey, startTermKey, selectedPace, paceMode, mixedRows);
     try {
       await navigator.clipboard.writeText(url);
-      setShareStatus('Link copied to clipboard.');
+      setShareStatus('copied');
+      scheduleShareReset();
     } catch (error) {
       console.error('Clipboard unavailable', error);
-      setShareStatus('Copy failed. Link opened in a new tab.');
+      setShareStatus('error');
+      scheduleShareReset();
       window.open(url, '_blank', 'noopener,noreferrer');
     }
-  }, [mixedRows, paceMode, programKey, selectedPace, startTermKey]);
+  }, [
+    mixedRows,
+    paceMode,
+    programKey,
+    scheduleShareReset,
+    selectedPace,
+    startTermKey
+  ]);
 
   return {
     activePlan,
