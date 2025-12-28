@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import App from './App';
@@ -16,14 +16,24 @@ describe('App', () => {
     const paceRow = screen.getAllByLabelText(/select 3 credits per term/i)[0];
     await userEvent.click(paceRow);
 
+    const planButton = within(
+      screen.getAllByRole('region', { name: /start your oms plan/i })[0]
+    ).getByRole('button', { name: /update my plan/i });
+    await userEvent.click(planButton);
+
     expect(screen.getByText(/10 semesters/i)).toBeInTheDocument();
   });
 
   it('renders a mixed load timeline when enabled', async () => {
     render(<App />);
 
-    const toggle = screen.getAllByRole('button', { name: /mixed load/i })[0];
+    const toggle = screen.getAllByRole('radio', { name: /custom schedule/i })[0];
     await userEvent.click(toggle);
+
+    const planButton = within(
+      screen.getAllByRole('region', { name: /start your oms plan/i })[0]
+    ).getByRole('button', { name: /update my plan/i });
+    await userEvent.click(planButton);
 
     expect(screen.getByText(/calendar timeline/i)).toBeInTheDocument();
     expect(screen.getAllByText(/credits ·/i).length).toBeGreaterThan(0);

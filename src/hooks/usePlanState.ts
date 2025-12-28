@@ -29,8 +29,11 @@ export const usePlanState = () => {
   const [draftProgramKey, setDraftProgramKey] = useState<ProgramKey>('omscs');
   const [draftStartTermKey, setDraftStartTermKey] = useState<string>(DEFAULT_START_TERM_KEY);
   const [selectedPace, setSelectedPace] = useState<number>(6);
+  const [draftSelectedPace, setDraftSelectedPace] = useState<number>(6);
   const [paceMode, setPaceMode] = useState<'constant' | 'mixed'>('constant');
+  const [draftPaceMode, setDraftPaceMode] = useState<'constant' | 'mixed'>('constant');
   const [mixedRows, setMixedRows] = useState(DEFAULT_MIXED_ROWS);
+  const [draftMixedRows, setDraftMixedRows] = useState(DEFAULT_MIXED_ROWS);
   const [shareStatus, setShareStatus] = useState<string>('');
 
   useEffect(() => {
@@ -56,24 +59,53 @@ export const usePlanState = () => {
     setDraftStartTermKey(resolvedStartTermKey);
     if (PACE_OPTIONS.includes(paceParam)) {
       setSelectedPace(paceParam);
+      setDraftSelectedPace(paceParam);
     }
     if (modeParam === 'mixed' || modeParam === 'constant') {
       setPaceMode(modeParam);
+      setDraftPaceMode(modeParam);
     }
     const parsedRows = parseMixedRows(mixedParam);
     if (parsedRows.length > 0) {
       setMixedRows(parsedRows);
+      setDraftMixedRows(parsedRows);
     }
   }, []);
 
   useEffect(() => {
     setDraftProgramKey(programKey);
     setDraftStartTermKey(startTermKey);
-  }, [programKey, startTermKey]);
+    setDraftSelectedPace(selectedPace);
+    setDraftPaceMode(paceMode);
+    setDraftMixedRows(mixedRows);
+  }, [programKey, startTermKey, selectedPace, paceMode, mixedRows]);
 
   const startTerm = useMemo(() => resolveStartTerm(startTermKey), [startTermKey]);
+  const draftStartTerm = useMemo(
+    () => resolveStartTerm(draftStartTermKey),
+    [draftStartTermKey]
+  );
 
   const paceRows = useMemo(() => {
+    return PACE_OPTIONS.map((creditsPerTerm) => {
+      const fullDegree = calculateFullDegree(
+        draftProgramKey,
+        degreeCreditsByProgram[draftProgramKey],
+        creditsPerTerm,
+        0,
+        true,
+        3
+      );
+      const finishTerm = getFinishTerm(draftStartTerm, fullDegree.numberOfTerms);
+      return {
+        creditsPerTerm,
+        finishTerm,
+        fullDegree
+      };
+    });
+  }, [draftProgramKey, draftStartTerm]);
+
+  const appliedPaceRows = useMemo(() => {
     return PACE_OPTIONS.map((creditsPerTerm) => {
       const fullDegree = calculateFullDegree(
         programKey,
@@ -92,12 +124,24 @@ export const usePlanState = () => {
     });
   }, [programKey, startTerm]);
 
-  const selectedRow = paceRows.find((row) => row.creditsPerTerm === selectedPace) ?? paceRows[0];
+  const selectedRow =
+    appliedPaceRows.find((row) => row.creditsPerTerm === selectedPace) ??
+    appliedPaceRows[0];
   const selectedProgram = PROGRAMS.find((program) => program.key === programKey);
   const mixedPlan = useMemo(
     () =>
       calculateMixedPlan(programKey, degreeCreditsByProgram[programKey], startTerm, mixedRows),
     [programKey, startTerm, mixedRows]
+  );
+  const draftMixedPlan = useMemo(
+    () =>
+      calculateMixedPlan(
+        draftProgramKey,
+        degreeCreditsByProgram[draftProgramKey],
+        draftStartTerm,
+        draftMixedRows
+      ),
+    [draftProgramKey, draftStartTerm, draftMixedRows]
   );
   const activePlan =
     paceMode === 'mixed'
@@ -115,6 +159,22 @@ export const usePlanState = () => {
           schedule: []
         };
   const isMixedIncomplete = mixedPlan.creditsCovered < degreeCreditsByProgram[programKey];
+  const isDraftMixedIncomplete =
+    draftMixedPlan.creditsCovered < degreeCreditsByProgram[draftProgramKey];
+
+  const handleApplyDraft = useCallback(() => {
+    setProgramKey(draftProgramKey);
+    setStartTermKey(draftStartTermKey);
+    setSelectedPace(draftSelectedPace);
+    setPaceMode(draftPaceMode);
+    setMixedRows(draftMixedRows);
+  }, [
+    draftMixedRows,
+    draftPaceMode,
+    draftProgramKey,
+    draftSelectedPace,
+    draftStartTermKey
+  ]);
 
   const handleShare = useCallback(async () => {
     const url = buildShareUrl(programKey, startTermKey, selectedPace, paceMode, mixedRows);
@@ -130,9 +190,15 @@ export const usePlanState = () => {
 
   return {
     activePlan,
+    draftMixedPlan,
+    draftMixedRows,
+    draftPaceMode,
     draftProgramKey,
+    draftSelectedPace,
     draftStartTermKey,
+    handleApplyDraft,
     handleShare,
+    isDraftMixedIncomplete,
     isMixedIncomplete,
     mixedPlan,
     mixedRows,
@@ -143,7 +209,10 @@ export const usePlanState = () => {
     selectedProgram,
     shareStatus,
     startTermKey,
+    setDraftMixedRows,
+    setDraftPaceMode,
     setDraftProgramKey,
+    setDraftSelectedPace,
     setDraftStartTermKey,
     setMixedRows,
     setPaceMode,
